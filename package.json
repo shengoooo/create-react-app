@@ -59,5 +59,18 @@
     "yarn.lock": [
       "git rm --cached"
     ]
+  },
+  "webpack": {
+    "port": 9998,
+    "entries": [
+      {
+        "name": "index",
+        "path": "index.js"
+      },
+      {
+        "name": "h5",
+        "path": "h5.js"
+      }
+    ]
   }
 }
