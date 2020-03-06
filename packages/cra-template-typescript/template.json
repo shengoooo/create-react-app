@@ -9,6 +9,15 @@
       "@types/react-dom": "^16.9.0",
       "@types/jest": "^24.0.0",
       "typescript": "~3.7.2"
+    },
+    "webpack": {
+      "port": 3000,
+      "entries": [
+        {
+          "name": "index",
+          "path": "index.tsx"
+        }
+      ]
     }
   }
 }

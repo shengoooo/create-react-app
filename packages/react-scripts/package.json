@@ -1,6 +1,6 @@
 {
   "name": "odin-react-scripts",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Configuration and scripts for Odin.",
   "repository": {
     "type": "git",
@@ -111,19 +111,6 @@
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
-    ]
-  },
-  "webpack": {
-    "port": 9998,
-    "entries": [
-      {
-        "name": "index",
-        "path": "index.js"
-      },
-      {
-        "name": "h5",
-        "path": "h5.js"
-      }
     ]
   }
 }
