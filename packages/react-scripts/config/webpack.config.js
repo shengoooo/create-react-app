@@ -32,6 +32,7 @@ const getClientEnvironment = require('./env');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
 const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin');
 const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 // @remove-on-eject-begin
 const getCacheIdentifier = require('react-dev-utils/getCacheIdentifier');
 // @remove-on-eject-end
@@ -42,6 +43,11 @@ const getIPAddress = require('./getIPAddress');
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = false; // process.env.GENERATE_SOURCEMAP !== 'false';
+
+const webpackDevClientEntry = require.resolve(
+  'react-dev-utils/webpackHotDevClient'
+);
+
 // Some apps do not need the benefits of saving a web request, so not inlining the chunk
 // makes for a smoother build process.
 const shouldInlineRuntimeChunk = process.env.INLINE_RUNTIME_CHUNK !== 'false';
@@ -79,20 +85,6 @@ module.exports = function(webpackEnv) {
   const isEnvDevelopment = webpackEnv === 'development';
   const isEnvProduction = webpackEnv === 'production';
 
-  // 奥丁使用IP+端口的形式，作为publicPath
-  const publicPath = isEnvProduction
-    ? paths.servedPath
-    : isEnvDevelopment && `http://${getIPAddress()}:${port}/`;
-  // 奥丁的入口文件
-  const webpackEntry = {};
-  entries.forEach(entry => {
-    webpackEntry[entry.name] = [
-      isEnvDevelopment &&
-        require.resolve('react-dev-utils/webpackHotDevClient'),
-      path.resolve(paths.appSrc, entry.path),
-    ].filter(Boolean);
-  });
-
   // Variable used for enabling profiling in Production
   // passed into alias object. Uses a flag if passed into the build command
   const isEnvProductionProfile =
@@ -103,6 +95,21 @@ module.exports = function(webpackEnv) {
   // Omit trailing slash as %PUBLIC_URL%/xyz looks better than %PUBLIC_URL%xyz.
   // Get environment variables to inject into our app.
   const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1));
+
+  const shouldUseReactRefresh = env.raw.FAST_REFRESH;
+
+  // 奥丁使用IP+端口的形式，作为publicPath
+  const publicPath = isEnvProduction
+    ? paths.servedPath
+    : isEnvDevelopment && `http://${getIPAddress()}:${port}/`;
+  // 奥丁的入口文件
+  const webpackEntry = {};
+  entries.forEach(entry => {
+    webpackEntry[entry.name] = [
+      isEnvDevelopment && !shouldUseReactRefresh && webpackDevClientEntry,
+      path.resolve(paths.appSrc, entry.path),
+    ].filter(Boolean);
+  });
 
   // common function to get style loaders
   // javascriptEnabled是专门给less用的
@@ -428,7 +435,10 @@ module.exports = function(webpackEnv) {
                         },
                       },
                     },
-                  ],
+                    isEnvDevelopment &&
+                      shouldUseReactRefresh &&
+                      require.resolve('react-refresh/babel'),
+                  ].filter(Boolean),
                 ],
                 // This is a feature of `babel-loader` for webpack (not Babel itself).
                 // It enables caching results in ./node_modules/.cache/babel-loader/
@@ -668,6 +678,17 @@ module.exports = function(webpackEnv) {
       new webpack.DefinePlugin(env.stringified),
       // This is necessary to emit hot updates (currently CSS only):
       isEnvDevelopment && new webpack.HotModuleReplacementPlugin(),
+      // Experimental hot reloading for React .
+      // https://github.com/facebook/react/tree/master/packages/react-refresh
+      isEnvDevelopment &&
+        shouldUseReactRefresh &&
+        new ReactRefreshWebpackPlugin({
+          overlay: {
+            entry: webpackDevClientEntry,
+            // TODO: This is just a stub module. Clean this up if possible.
+            module: require.resolve('./hotRefreshOverlayModuleStub'),
+          },
+        }),
       // Watcher doesn't work well if you mistype casing in a path so we use
       // a plugin that prints an error when you attempt to do this.
       // See https://github.com/facebook/create-react-app/issues/240
