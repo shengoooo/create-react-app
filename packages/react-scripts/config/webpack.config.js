@@ -105,10 +105,10 @@ module.exports = function(webpackEnv) {
   // 奥丁的入口文件
   const webpackEntry = {};
   entries.forEach(entry => {
-    webpackEntry[entry.name] = [
-      isEnvDevelopment && !shouldUseReactRefresh && webpackDevClientEntry,
-      path.resolve(paths.appSrc, entry.path),
-    ].filter(Boolean);
+    webpackEntry[entry.name] =
+      isEnvDevelopment && !shouldUseReactRefresh
+        ? [webpackDevClientEntry, path.resolve(paths.appSrc, entry.path)]
+        : path.resolve(paths.appSrc, entry.path);
   });
 
   // common function to get style loaders
