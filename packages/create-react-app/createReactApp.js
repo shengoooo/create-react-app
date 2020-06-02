@@ -74,11 +74,6 @@ const program = new commander.Command(packageJson.name)
   )
   .option('--use-npm')
   .option('--use-pnp')
-  // TODO: Remove this in next major release.
-  .option(
-    '--typescript',
-    '(this option will be removed in favour of templates in the next major release of create-react-app)'
-  )
   .allowUnknownOption()
   .on('--help', () => {
     console.log(`    Only ${chalk.green('<project-directory>')} is required.`);
@@ -114,7 +109,7 @@ const program = new commander.Command(packageJson.name)
     console.log();
     console.log(`    A custom ${chalk.cyan('--template')} can be one of:`);
     console.log(
-      `      - a custom fork published on npm: ${chalk.green(
+      `      - a custom template published on npm: ${chalk.green(
         'cra-template-typescript'
       )}`
     );
@@ -190,19 +185,10 @@ createApp(
   program.scriptsVersion,
   program.template,
   program.useNpm,
-  program.usePnp,
-  program.typescript
+  program.usePnp
 );
 
-function createApp(
-  name,
-  verbose,
-  version,
-  template,
-  useNpm,
-  usePnp,
-  useTypeScript
-) {
+function createApp(name, verbose, version, template, useNpm, usePnp) {
   const unsupportedNodeVersion = !semver.satisfies(process.version, '>=10');
   if (unsupportedNodeVersion) {
     console.log(
@@ -284,30 +270,12 @@ function createApp(
     }
   }
 
-  if (useTypeScript) {
-    console.log(
-      chalk.yellow(
-        'The --typescript option has been deprecated and will be removed in a future release.'
-      )
-    );
-    console.log(
-      chalk.yellow(
-        `In future, please use ${chalk.cyan('--template typescript')}.`
-      )
-    );
-    console.log();
-    if (!template) {
-      template = 'typescript';
-    }
-  }
-
   if (useYarn) {
     let yarnUsesDefaultRegistry = true;
     try {
       yarnUsesDefaultRegistry =
-        execSync('yarnpkg config get registry')
-          .toString()
-          .trim() === 'https://registry.yarnpkg.com';
+        execSync('yarnpkg config get registry').toString().trim() ===
+        'https://registry.yarnpkg.com';
     } catch (e) {
       // ignore
     }
@@ -456,17 +424,6 @@ function run(
             } compatible with the ${chalk.cyan('--template')} option.`
           );
           console.log('');
-        }
-
-        // TODO: Remove with next major release.
-        if (!supportsTemplates && (template || '').includes('typescript')) {
-          allDependencies.push(
-            '@types/node',
-            '@types/react',
-            '@types/react-dom',
-            '@types/jest',
-            'typescript'
-          );
         }
 
         console.log(
@@ -769,9 +726,7 @@ function checkNpmVersion() {
   let hasMinNpm = false;
   let npmVersion = null;
   try {
-    npmVersion = execSync('npm --version')
-      .toString()
-      .trim();
+    npmVersion = execSync('npm --version').toString().trim();
     hasMinNpm = semver.gte(npmVersion, '6.0.0');
   } catch (err) {
     // ignore
@@ -789,9 +744,7 @@ function checkYarnVersion() {
   let hasMaxYarnPnp = false;
   let yarnVersion = null;
   try {
-    yarnVersion = execSync('yarnpkg --version')
-      .toString()
-      .trim();
+    yarnVersion = execSync('yarnpkg --version').toString().trim();
     if (semver.valid(yarnVersion)) {
       hasMinYarnPnp = semver.gte(yarnVersion, minYarnPnp);
       hasMaxYarnPnp = semver.lt(yarnVersion, maxYarnPnp);
@@ -1010,9 +963,7 @@ function getProxy() {
   } else {
     try {
       // Trying to read https-proxy from .npmrc
-      let httpsProxy = execSync('npm config get https-proxy')
-        .toString()
-        .trim();
+      let httpsProxy = execSync('npm config get https-proxy').toString().trim();
       return httpsProxy !== 'null' ? httpsProxy : undefined;
     } catch (e) {
       return;
