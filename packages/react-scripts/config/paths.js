@@ -140,3 +140,11 @@ if (
 // @remove-on-eject-end
 
 module.exports.moduleFileExtensions = moduleFileExtensions;
+
+const appPackageJson = require(resolveApp('package.json'));
+const defaultPort = 3000;
+// 奥丁前端端口号，在package.json里配置
+const port = appPackageJson.webpack
+  ? appPackageJson.webpack.port || defaultPort
+  : defaultPort;
+module.exports.devServerPort = port;
