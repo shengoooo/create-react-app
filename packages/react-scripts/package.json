@@ -1,6 +1,6 @@
 {
   "name": "odin-react-scripts",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Configuration and scripts for Odin.",
   "repository": {
     "type": "git",
@@ -43,6 +43,7 @@
     "dotenv": "8.2.0",
     "dotenv-expand": "5.1.0",
     "eslint": "^6.6.0",
+    "eslint-config-odin": "^0.0.1",
     "eslint-config-react-app": "^5.2.1",
     "eslint-loader": "3.0.3",
     "eslint-plugin-flowtype": "4.6.0",
