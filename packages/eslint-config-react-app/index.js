@@ -117,8 +117,15 @@ module.exports = {
   // NOTE: When adding rules here, you need to make sure they are compatible with
   // `typescript-eslint`, as some rules such as `no-array-constructor` aren't compatible.
   rules: {
-    // http://eslint.org/docs/rules/
+    // odin custom rules, based on sonar
     'array-callback-return': 'error',
+    'no-alert': 'error',
+    'no-dupe-keys': 'error',
+    'no-self-assign': 'error',
+    'no-empty-pattern': 'error',
+    'no-const-assign': 'error',
+
+    // http://eslint.org/docs/rules/
     'default-case': ['warn', { commentPattern: '^no default$' }],
     'dot-location': ['warn', 'property'],
     eqeqeq: ['warn', 'smart'],
@@ -126,15 +133,12 @@ module.exports = {
     'no-array-constructor': 'warn',
     'no-caller': 'warn',
     'no-cond-assign': ['warn', 'except-parens'],
-    'no-const-assign': 'warn',
     'no-control-regex': 'warn',
     'no-delete-var': 'warn',
     'no-dupe-args': 'warn',
     'no-dupe-class-members': 'warn',
-    'no-dupe-keys': 'warn',
     'no-duplicate-case': 'warn',
     'no-empty-character-class': 'warn',
-    'no-empty-pattern': 'warn',
     'no-eval': 'warn',
     'no-ex-assign': 'warn',
     'no-extend-native': 'warn',
@@ -177,7 +181,6 @@ module.exports = {
     'no-regex-spaces': 'warn',
     'no-restricted-syntax': ['warn', 'WithStatement'],
     'no-script-url': 'warn',
-    'no-self-assign': 'warn',
     'no-self-compare': 'warn',
     'no-sequences': 'warn',
     'no-shadow-restricted-names': 'warn',
