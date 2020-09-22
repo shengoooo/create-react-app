@@ -1,6 +1,6 @@
 {
   "name": "eslint-config-odin",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "ESLint configuration used by Create React App",
   "repository": {
     "type": "git",
