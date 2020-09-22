@@ -97,14 +97,17 @@ module.exports = function(webpackEnv) {
 
   // 奥丁使用IP+端口的形式，作为publicPath
   const publicPath = isEnvProduction
-    ? paths.servedPath
+    ? '/'
     : isEnvDevelopment && `http://${getIPAddress()}:${port}/`;
   // 奥丁的入口文件
   const webpackEntry = {};
   entries.forEach(entry => {
     webpackEntry[entry.name] = isEnvDevelopment
       ? [webpackDevClientEntry, path.resolve(paths.appSrc, entry.path)]
-      : path.resolve(paths.appSrc, entry.path);
+      : [
+          require.resolve('./polyfills'),
+          path.resolve(paths.appSrc, entry.path),
+        ];
   });
 
   // common function to get style loaders
