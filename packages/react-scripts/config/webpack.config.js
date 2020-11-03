@@ -26,12 +26,14 @@ const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
 const WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin');
 const ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin');
 const getCSSModuleLocalIdent = require('react-dev-utils/getCSSModuleLocalIdent');
+const ESLintPlugin = require('eslint-webpack-plugin');
 const paths = require('./paths');
 const modules = require('./modules');
 const getClientEnvironment = require('./env');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
 const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin');
 const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 // @remove-on-eject-begin
 const getCacheIdentifier = require('react-dev-utils/getCacheIdentifier');
 // @remove-on-eject-end
@@ -46,12 +48,13 @@ const shouldUseSourceMap = false; // process.env.GENERATE_SOURCEMAP !== 'false';
 const webpackDevClientEntry = require.resolve(
   'react-dev-utils/webpackHotDevClient'
 );
+const reactRefreshOverlayEntry = require.resolve(
+  'react-dev-utils/refreshOverlayInterop'
+);
 
 // Some apps do not need the benefits of saving a web request, so not inlining the chunk
 // makes for a smoother build process.
 const shouldInlineRuntimeChunk = process.env.INLINE_RUNTIME_CHUNK !== 'false';
-
-const isExtendingEslintConfig = process.env.EXTEND_ESLINT === 'true';
 
 const imageInlineSizeLimit = parseInt(
   process.env.IMAGE_INLINE_SIZE_LIMIT || '10000'
@@ -59,6 +62,9 @@ const imageInlineSizeLimit = parseInt(
 
 // Check if TypeScript is setup
 const useTypeScript = fs.existsSync(paths.appTsConfig);
+
+// Get the path to the uncompiled service worker (if it exists).
+const swSrc = paths.swSrc;
 
 // style files regexes
 const cssRegex = /\.css$/;
@@ -78,6 +84,19 @@ const entries = appPackageJson.webpack
   ? appPackageJson.webpack.entries || defaultEntries
   : defaultEntries;
 
+const hasJsxRuntime = (() => {
+  if (process.env.DISABLE_NEW_JSX_TRANSFORM === 'true') {
+    return false;
+  }
+
+  try {
+    require.resolve('react/jsx-runtime');
+    return true;
+  } catch (e) {
+    return false;
+  }
+})();
+
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
 module.exports = function(webpackEnv) {
@@ -95,6 +114,8 @@ module.exports = function(webpackEnv) {
   // Get environment variables to inject into our app.
   const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1));
 
+  const shouldUseReactRefresh = env.raw.FAST_REFRESH;
+
   // 奥丁使用IP+端口的形式，作为publicPath
   const publicPath = isEnvProduction
     ? '/'
@@ -102,12 +123,13 @@ module.exports = function(webpackEnv) {
   // 奥丁的入口文件
   const webpackEntry = {};
   entries.forEach(entry => {
-    webpackEntry[entry.name] = isEnvDevelopment
-      ? [webpackDevClientEntry, path.resolve(paths.appSrc, entry.path)]
-      : [
-          require.resolve('./polyfills'),
-          path.resolve(paths.appSrc, entry.path),
-        ];
+    webpackEntry[entry.name] =
+      isEnvDevelopment && !shouldUseReactRefresh
+        ? [webpackDevClientEntry, path.resolve(paths.appSrc, entry.path)]
+        : [
+            require.resolve('./polyfills'),
+            path.resolve(paths.appSrc, entry.path),
+          ];
   });
 
   // common function to get style loaders
@@ -335,7 +357,10 @@ module.exports = function(webpackEnv) {
         // To fix this, we prevent you from importing files out of src/ -- if you'd like to,
         // please link the files into your node_modules/ and let module-resolution kick in.
         // Make sure your source files are compiled, as they will not be processed in any way.
-        new ModuleScopePlugin(paths.appSrc, [paths.appPackageJson]),
+        new ModuleScopePlugin(paths.appSrc, [
+          paths.appPackageJson,
+          reactRefreshOverlayEntry,
+        ]),
       ],
     },
     resolveLoader: {
@@ -350,39 +375,22 @@ module.exports = function(webpackEnv) {
       rules: [
         // Disable require.ensure as it's not a standard language feature.
         { parser: { requireEnsure: false } },
-
-        // First, run the linter.
-        // It's important to do this before Babel processes the JS.
-        {
-          test: /\.(js|mjs|jsx|ts|tsx)$/,
-          enforce: 'pre',
-          use: [
-            {
-              options: {
-                cache: true,
-                formatter: require.resolve('react-dev-utils/eslintFormatter'),
-                eslintPath: require.resolve('eslint'),
-                resolvePluginsRelativeTo: __dirname,
-                // @remove-on-eject-begin
-                ignore: isExtendingEslintConfig,
-                baseConfig: isExtendingEslintConfig
-                  ? undefined
-                  : {
-                      extends: [require.resolve('eslint-config-odin')],
-                    },
-                useEslintrc: isExtendingEslintConfig,
-                // @remove-on-eject-end
-              },
-              loader: require.resolve('eslint-loader'),
-            },
-          ],
-          include: paths.appSrc,
-        },
         {
           // "oneOf" will traverse all following loaders until one will
           // match the requirements. When no loader matches it will fall
           // back to the "file" loader at the end of the loader list.
           oneOf: [
+            // TODO: Merge this config once `image/avif` is in the mime-db
+            // https://github.com/jshttp/mime-db
+            {
+              test: [/\.avif$/],
+              loader: require.resolve('url-loader'),
+              options: {
+                limit: imageInlineSizeLimit,
+                mimetype: 'image/avif',
+                name: 'static/media/[name].[hash:8].[ext]',
+              },
+            },
             // "url" loader works like "file" loader except that it embeds assets
             // smaller than specified limit in bytes as data URLs to avoid requests.
             // A missing `test` is equivalent to a match.
@@ -407,7 +415,14 @@ module.exports = function(webpackEnv) {
                 // @remove-on-eject-begin
                 babelrc: true,
                 configFile: false,
-                presets: [require.resolve('babel-preset-react-app')],
+                presets: [
+                  [
+                    require.resolve('babel-preset-react-app'),
+                    {
+                      runtime: hasJsxRuntime ? 'automatic' : 'classic',
+                    },
+                  ],
+                ],
                 // Make sure we have a unique cache identifier, erring on the
                 // side of caution.
                 // We remove this when the user ejects because the default
@@ -437,7 +452,10 @@ module.exports = function(webpackEnv) {
                       },
                     },
                   ],
-                ],
+                  isEnvDevelopment &&
+                    shouldUseReactRefresh &&
+                    require.resolve('react-refresh/babel'),
+                ].filter(Boolean),
                 // This is a feature of `babel-loader` for webpack (not Babel itself).
                 // It enables caching results in ./node_modules/.cache/babel-loader/
                 // directory for faster rebuilds.
@@ -682,8 +700,23 @@ module.exports = function(webpackEnv) {
       // during a production build.
       // Otherwise React will be compiled in the very slow development mode.
       new webpack.DefinePlugin(env.stringified),
-      // This is necessary to emit hot updates (currently CSS only):
+      // This is necessary to emit hot updates (CSS and Fast Refresh):
       isEnvDevelopment && new webpack.HotModuleReplacementPlugin(),
+      // Experimental hot reloading for React .
+      // https://github.com/facebook/react/tree/master/packages/react-refresh
+      isEnvDevelopment &&
+        shouldUseReactRefresh &&
+        new ReactRefreshWebpackPlugin({
+          overlay: {
+            entry: webpackDevClientEntry,
+            // The expected exports are slightly different from what the overlay exports,
+            // so an interop is included here to enable feedback on module-level errors.
+            module: reactRefreshOverlayEntry,
+            // Since we ship a custom dev client and overlay integration,
+            // the bundled socket handling logic can be eliminated.
+            sockIntegration: false,
+          },
+        }),
       // Watcher doesn't work well if you mistype casing in a path so we use
       // a plugin that prints an error when you attempt to do this.
       // See https://github.com/facebook/create-react-app/issues/240
@@ -728,20 +761,11 @@ module.exports = function(webpackEnv) {
       // Generate a service worker script that will precache, and keep up to date,
       // the HTML & assets that are part of the webpack build.
       isEnvProduction &&
-        new WorkboxWebpackPlugin.GenerateSW({
-          clientsClaim: true,
-          exclude: [/\.map$/, /asset-manifest\.json$/],
-          importWorkboxFrom: 'cdn',
-          navigateFallback: paths.publicUrlOrPath + 'index.html',
-          navigateFallbackBlacklist: [
-            // Exclude URLs starting with /_, as they're likely an API call
-            new RegExp('^/_'),
-            // Exclude any URLs whose last part seems to be a file extension
-            // as they're likely a resource and not a SPA route.
-            // URLs containing a "?" character won't be blacklisted as they're likely
-            // a route with query params (e.g. auth callbacks).
-            new RegExp('/[^/?]+\\.[^/]+$'),
-          ],
+        fs.existsSync(swSrc) &&
+        new WorkboxWebpackPlugin.InjectManifest({
+          swSrc,
+          dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
+          exclude: [/\.map$/, /asset-manifest\.json$/, /LICENSE/],
         }),
       // TypeScript type checking
       useTypeScript &&
@@ -750,7 +774,6 @@ module.exports = function(webpackEnv) {
             basedir: paths.appNodeModules,
           }),
           async: isEnvDevelopment,
-          useTypescriptIncrementalApi: true,
           checkSyntacticErrors: true,
           resolveModuleNameModule: process.versions.pnp
             ? `${__dirname}/pnpTs.js`
@@ -760,9 +783,14 @@ module.exports = function(webpackEnv) {
             : undefined,
           tsconfig: paths.appTsConfig,
           reportFiles: [
-            '**',
-            '!**/__tests__/**',
-            '!**/?(*.)(spec|test).*',
+            // This one is specifically to match during CI tests,
+            // as micromatch doesn't match
+            // '../cra-template-typescript/template/src/App.tsx'
+            // otherwise.
+            '../**/src/**/*.{ts,tsx}',
+            '**/src/**/*.{ts,tsx}',
+            '!**/src/**/__tests__/**',
+            '!**/src/**/?(*.)(spec|test).*',
             '!**/src/setupProxy.*',
             '!**/src/setupTests.*',
           ],
@@ -770,6 +798,24 @@ module.exports = function(webpackEnv) {
           // The formatter is invoked directly in WebpackDevServerUtils during development
           formatter: isEnvProduction ? typescriptFormatter : undefined,
         }),
+      new ESLintPlugin({
+        // Plugin options
+        extensions: ['js', 'mjs', 'jsx', 'ts', 'tsx'],
+        formatter: require.resolve('react-dev-utils/eslintFormatter'),
+        eslintPath: require.resolve('eslint'),
+        context: paths.appSrc,
+        // ESLint class options
+        cwd: paths.appPath,
+        resolvePluginsRelativeTo: __dirname,
+        baseConfig: {
+          extends: [require.resolve('eslint-config-odin')],
+          rules: {
+            ...(!hasJsxRuntime && {
+              'react/react-in-jsx-scope': 'error',
+            }),
+          },
+        },
+      }),
     ].filter(Boolean),
     // Some libraries import Node modules but don't use them in the browser.
     // Tell webpack to provide empty mocks for them so importing them works.
