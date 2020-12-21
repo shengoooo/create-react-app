@@ -99,7 +99,7 @@ const hasJsxRuntime = (() => {
 
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
-module.exports = function(webpackEnv) {
+module.exports = function (webpackEnv) {
   const isEnvDevelopment = webpackEnv === 'development';
   const isEnvProduction = webpackEnv === 'production';
 
@@ -412,9 +412,6 @@ module.exports = function(webpackEnv) {
                 customize: require.resolve(
                   'babel-preset-react-app/webpack-overrides'
                 ),
-                // @remove-on-eject-begin
-                babelrc: true,
-                configFile: false,
                 presets: [
                   [
                     require.resolve('babel-preset-react-app'),
@@ -423,6 +420,9 @@ module.exports = function(webpackEnv) {
                     },
                   ],
                 ],
+                // @remove-on-eject-begin
+                babelrc: true,
+                configFile: false,
                 // Make sure we have a unique cache identifier, erring on the
                 // side of caution.
                 // We remove this when the user ejects because the default
@@ -744,7 +744,7 @@ module.exports = function(webpackEnv) {
         fileName: 'cdnResource.json',
         publicPath: paths.publicUrlOrPath,
         generate: (seed, files) => {
-          const manifestFiles = files.reduce(function(manifest, file) {
+          const manifestFiles = files.reduce(function (manifest, file) {
             manifest[`/${file.name}`] = file.path;
             return manifest;
           }, seed);
@@ -766,6 +766,10 @@ module.exports = function(webpackEnv) {
           swSrc,
           dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
           exclude: [/\.map$/, /asset-manifest\.json$/, /LICENSE/],
+          // Bump up the default maximum size (2mb) that's precached,
+          // to make lazy-loading failure scenarios less likely.
+          // See https://github.com/cra-template/pwa/issues/13#issuecomment-722667270
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         }),
       // TypeScript type checking
       useTypeScript &&
@@ -804,6 +808,7 @@ module.exports = function(webpackEnv) {
         formatter: require.resolve('react-dev-utils/eslintFormatter'),
         eslintPath: require.resolve('eslint'),
         context: paths.appSrc,
+        cache: true,
         // ESLint class options
         cwd: paths.appPath,
         resolvePluginsRelativeTo: __dirname,
