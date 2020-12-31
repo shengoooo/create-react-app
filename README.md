@@ -2,6 +2,8 @@
 
 相对于官方的 create-react-app 里自带的 react-script，有以下改动
 
+1. webpack devServer支持cors
+
 1. 支持 styl、less
 
 1. publicPath 使用 devServer 的 IP+端口号的形式，方便将开发机地址分享给别人使用
