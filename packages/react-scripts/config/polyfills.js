@@ -3,7 +3,7 @@
  */
 let baseUrl = null;
 
-const getBasePath = function() {
+const getBasePath = function () {
   if (baseUrl === null) {
     let src = '';
     if (document.currentScript) {
@@ -17,7 +17,9 @@ const getBasePath = function() {
     // if (src.indexOf('http') != 0) {
     //   src = location.origin + src
     // }
-    var lastPoint = src.lastIndexOf('/js/');
+    var lastPoint = src.lastIndexOf(
+      process.env.NODE_ENV === 'development' ? '/' : '/js/'
+    );
     if (lastPoint >= 0) {
       src = src.substring(0, lastPoint + 1);
     }

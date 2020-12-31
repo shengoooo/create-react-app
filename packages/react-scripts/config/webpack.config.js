@@ -125,7 +125,11 @@ module.exports = function (webpackEnv) {
   entries.forEach(entry => {
     webpackEntry[entry.name] =
       isEnvDevelopment && !shouldUseReactRefresh
-        ? [webpackDevClientEntry, path.resolve(paths.appSrc, entry.path)]
+        ? [
+            webpackDevClientEntry,
+            require.resolve('./polyfills'),
+            path.resolve(paths.appSrc, entry.path),
+          ]
         : [
             require.resolve('./polyfills'),
             path.resolve(paths.appSrc, entry.path),
