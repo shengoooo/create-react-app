@@ -2,7 +2,7 @@
 
 相对于官方的 create-react-app 里自带的 react-script，有以下改动
 
-1. webpack devServer支持cors
+1. webpack devServer 支持 cors
 
 1. 支持 styl、less
 
